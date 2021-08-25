@@ -885,14 +885,16 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             throw new RuntimeException("My id " + myid + " not in the peer list");
          }
         loadDataBase();
+        // NIO bind
         startServerCnxnFactory();
         try {
-            adminServer.start();
+            adminServer.start(); // 启动Jetty server
         } catch (AdminServerException e) {
             LOG.warn("Problem starting AdminServer", e);
             System.out.println(e);
         }
         startLeaderElection();
+        // 开始选举的核心逻辑
         super.start();
     }
 
@@ -959,7 +961,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
        // if (!getView().containsKey(myid)) {
       //      throw new RuntimeException("My id " + myid + " not in the peer list");
         //}
-        if (electionType == 0) {
+        if (electionType == 0) { // 启动时默认为3
             try {
                 udpSocket = new DatagramSocket(getQuorumAddress().getPort());
                 responder = new ResponderThread();
@@ -1085,8 +1087,11 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             }
             QuorumCnxManager.Listener listener = qcm.listener;
             if(listener != null){
+                // 以BIO 的方式启动一个线程监听端口，处理选票
                 listener.start();
+                // 初始化sendqueue recvqueue 队列
                 FastLeaderElection fle = new FastLeaderElection(this, qcm);
+                // 开启WorkerSender WorkerReceiver 线程
                 fle.start();
                 le = fle;
             } else {
@@ -1262,6 +1267,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                 case LEADING:
                     LOG.info("LEADING");
                     try {
+                        // new Leader 开启serverSocket通信端口
                         setLeader(makeLeader(logFactory));
                         leader.lead();
                         setLeader(null);

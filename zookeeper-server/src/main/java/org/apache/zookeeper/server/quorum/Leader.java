@@ -246,6 +246,7 @@ public class Leader {
                 if (self.getQuorumListenOnAllIPs()) {
                     ss = new ServerSocket(self.getQuorumAddress().getPort());
                 } else {
+                    // 开启与follower节点通信的端口
                     ss = new ServerSocket();
                 }
             }
@@ -470,12 +471,14 @@ public class Leader {
 
         try {
             self.tick.set(0);
+            // 初始化Zookeeper数据
             zk.loadData();
 
             leaderStateSummary = new StateSummary(self.getCurrentEpoch(), zk.getLastProcessedZxid());
 
             // Start thread that waits for connection requests from
             // new followers.
+            // 监听端口 数据同步通信
             cnxAcceptor = new LearnerCnxAcceptor();
             cnxAcceptor.start();
 
@@ -604,6 +607,7 @@ public class Leader {
             // If not null then shutdown this leader
             String shutdownMessage = null;
 
+            // 周期性的发送信息
             while (true) {
                 synchronized (this) {
                     long start = Time.currentElapsedTime();
@@ -654,6 +658,7 @@ public class Leader {
                     }
                     tickSkip = !tickSkip;
                 }
+                // 发送ping 心跳
                 for (LearnerHandler f : getLearners()) {
                     f.ping();
                 }

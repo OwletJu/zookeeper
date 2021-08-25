@@ -570,6 +570,7 @@ public class QuorumCnxManager {
         try {
             protocolVersion = din.readLong();
             if (protocolVersion >= 0) { // this is a server id and not a protocol version
+                // 拿到远端服务器的id
                 sid = protocolVersion;
             } else {
                 try {
@@ -600,8 +601,9 @@ public class QuorumCnxManager {
         // do authenticating learner
         authServer.authenticate(sock, din);
         //If wins the challenge, then close the new connection.
+        // 只允许大的sid连接小的sid
         if (sid < self.getId()) {
-            /*
+            /* 如果id比自己的小，那就关掉对方的socket,重新建立一个连接
              * This replica might still believe that the connection to sid is
              * up, so we have to shut down the workers before trying to open a
              * new connection.
@@ -667,8 +669,10 @@ public class QuorumCnxManager {
               */
              ArrayBlockingQueue<ByteBuffer> bq = new ArrayBlockingQueue<ByteBuffer>(
                 SEND_CAPACITY);
+             // 把bq 添加到 queueSendMap
              ArrayBlockingQueue<ByteBuffer> oldq = queueSendMap.putIfAbsent(sid, bq);
              if (oldq != null) {
+                 // 把数据丢到bq中
                  addToSendQueue(oldq, b);
              } else {
                  addToSendQueue(bq, b);
@@ -942,6 +946,7 @@ public class QuorumCnxManager {
                             if (quorumSaslAuthEnabled) {
                                 receiveConnectionAsync(client);
                             } else {
+                                // 处理连接
                                 receiveConnection(client);
                             }
                             numRetries = 0;
@@ -1235,6 +1240,7 @@ public class QuorumCnxManager {
                     byte[] msgArray = new byte[length];
                     din.readFully(msgArray, 0, length);
                     ByteBuffer message = ByteBuffer.wrap(msgArray);
+                    // 把数据添加到 recvQueue
                     addToRecvQueue(new Message(message.duplicate(), sid));
                 }
             } catch (Exception e) {
